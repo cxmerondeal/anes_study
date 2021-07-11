@@ -1,6 +1,6 @@
 # Project: ANES Analysis and Sexuality
 # Programmer: C. Deal
-# Date Updated: 07/07/2021
+# Date Updated: 07/11/2021
 
 #Read in Data
 library(readr)
@@ -14,11 +14,10 @@ library(sjmisc)
 library(sjlabelled)
 library(survey)
 library(descr)
-anes_data <- read.csv("C:\\Cameron Files\\Vanderbilt\\Research\\Independent Projects\\ANES Summer 2021\\anes_data.csv", na.strings = c("-9. Refused","-5. Interview breakoff (sufficient partial IW)","-4. Technical error","-8. Don't know","-2. Missing, other specify not coded for preliminary release", "-1. Inapplicable", "-6. No post-election interview", "-7. No post-election data, deleted due to incomplete interview"))
+library(ltm)
+anes_data <- read.csv("C:\\Cameron Files\\Vanderbilt\\Research\\Independent Projects\\ANES Summer 2021\\anes_data.csv", na.strings = c("-9. Refused", "998. Don't know", "-5. Interview breakoff (sufficient partial IW)","-4. Technical error","-8. Don't know","-2. Missing, other specify not coded for preliminary release", "-1. Inapplicable", "-6. No post-election interview", "-7. No post-election data, deleted due to incomplete interview"))
 anes_data <- as_tibble(anes_data) 
-anes_data <- select(anes_data, V200010b, V201005, V201006, V200010c, V200010d, V201453, V202212, V202213, V202215, V201601, V201600, V201549x, V201617x, V201507x, V201508, V201511x, V201018, V202008, V202056, V201008, V202066, V202005, V202007, V202009, V202014, V202015, V202016, V202017, V202019, V202021, V202022, V202023, V202024, V202025, V202026, V202028, V202029, V202031, V202032, V202034, V202036, V202038, V202040, V202166)
-
-
+anes_data <- dplyr::select(anes_data, V200010b, V201005, V201006, V200010c, V200010d, V201453, V202212, V202213, V202215, V201601, V201600, V201549x, V201617x, V201507x, V201508, V201511x, V201018, V202008, V202056, V201008, V202066, V202005, V202007, V202009, V202014, V202015, V202016, V202017, V202019, V202021, V202022, V202023, V202024, V202025, V202026, V202028, V202029, V202031, V202032, V202034, V202036, V202038, V202040, V202166)
 
 
 ######Clean up Variables
@@ -35,7 +34,7 @@ names(anes_data)[names(anes_data) == "V200010d"] <- "strata"
 
 ###Independent Variables:
 
-###Demographics
+##Demographics
 #Sexuality
 names(anes_data)[names(anes_data) == "V201601"] <- "orientation"
 anes_data$orientation <- as.factor(anes_data$orientation)
@@ -48,76 +47,150 @@ levels(anes_data$orientation1)[c(2,3,4)] <- 1
 anes_data$orientation1 <- as.factor(anes_data$orientation1)
 
 #Sex
-names(anes_data)[names(anes_data) == "V201600"] <- "sex"
-anes_data$sex <- as.factor(anes_data$sex)
+anes_data$V201600[anes_data$V201600 == "2. Female"] <- 0
+anes_data$V201600[anes_data$V201600 == "1. Male"] <- 1
+names(anes_data)[names(anes_data) == "V201600"] <- "male"
+anes_data$male <- as.factor(anes_data$male)
 #Guide: 1. Male 2. Female
 
 #Race
 names(anes_data)[names(anes_data) == "V201549x"] <- "race"
+anes_data$race[anes_data$race == "4. Asian or Native Hawaiian/other Pacific Islander, non-Hispanic alone"] <- "All other races"
+anes_data$race[anes_data$race == "5. Native American/Alaska Native or other race, non-Hispanic alone"] <- "All other races"
+anes_data$race[anes_data$race == "6. Multiple races, non-Hispanic"] <- "All other races"
 anes_data$race <- as.factor(anes_data$race)
-#Guide: 1. White, non-Hispanic 2. Black, non-Hispanic 3. Hispanic 4. Asian or Native Hawaiian/other Pacific Islander, non-Hispanic alone 5. Native American/Alaska Native or other race, non-Hispanic alone 6. Multiple races, non-Hispanic
-
-#Income
-names(anes_data)[names(anes_data) == "V201617x"] <- "income"
-anes_data$income <- as.factor(anes_data$income)
-#Guide:
-#1. Under $9,999 2. $10,000-14,999 #3. $15,000-19,999 4. $20,000-24,999 #5. $25,000-29,999 6. $30,000-34,999
-#7. $35,000-39,999 8. $40,000-44,999 #9. $45,000-49,999 10. $50,000-59,999 #11. $60,000-64,999 12. $65,000-69,999
-#13. $70,000-74,999 14. $75,000-79,999 #15. $80,000-89,999 16. $90,000-99,999 #17. $100,000-109,999 18. $110,000-124,999
-#19. $125,000-149,999 20. $150,000-174,999 #21. $175,000-249,999 22. $250,000 or more
 
 #Age Continuous
 names(anes_data)[names(anes_data) == "V201507x"] <- "age"
-
-#Age Categorical
 anes_data$age[anes_data$age == "80. Age 80 or older"] <- 80
 anes_data$age <- as.numeric(anes_data$age)
-anes_data$agecat1<-cut(anes_data$age, c(18,29,39,49,59,69,79,109))
+
+#Age Square
+anes_data <- mutate(anes_data, age_square = (anes_data$age)^2)
 
 #Marriage Status
 names(anes_data)[names(anes_data) == "V201508"] <- "marriage"
 anes_data$marriage <- as.factor(anes_data$marriage)
 #Guide: 1. Married: spouse present 2. Married: spouse absent 3. Widowed 4. Divorced 5. Separated 6. Never married
 
+##Resources
 #Education Level
 names(anes_data)[names(anes_data) == "V201511x"] <- "education"
 anes_data$education <- as.factor(anes_data$education)
 #Guide:1. Less than high school credential 2. High school credential 3. Some post-high school, no bachelor’s degree
 #4. Bachelor’s degree 5. Graduate degree
 
-#Party of Registration
-names(anes_data)[names(anes_data) == "V201018"] <- "party_reg"
-anes_data$party_reg <- as.factor(anes_data$party_reg)
+
+#Income-STILL EDIT
+names(anes_data)[names(anes_data) == "V201617x"] <- "income"
+anes_data$income[anes_data$income == "1. Under $9,999"] <- "1. Less than $25,000"
+anes_data$income[anes_data$income == "2. $10,000-14,999"] <- "1. Less than $25,000"
+anes_data$income[anes_data$income == "3. $15,000-19,999"] <- "1. Less than $25,000"
+anes_data$income[anes_data$income == "4. $20,000-24,999"] <- "1. Less than $25,000"
+anes_data$income[anes_data$income == "5. $25,000-29,999"] <- "2. $25,000-50,000"
+anes_data$income[anes_data$income == "6. $30,000-34,999"] <- "2. $25,000-50,000"
+anes_data$income[anes_data$income == "7. $35,000-39,999"] <- "2. $25,000-50,000"
+anes_data$income[anes_data$income == "8. $40,000-44,999"] <- "2. $25,000-50,000"
+anes_data$income[anes_data$income == "9. $45,000-49,999"] <- "2. $25,000-50,000"
+anes_data$income[anes_data$income == "10. $50,000-59,999"] <- "3. $50,000-80,000"
+anes_data$income[anes_data$income == "11. $60,000-64,999"] <- "3. $50,000-80,000"
+anes_data$income[anes_data$income == "12. $65,000-69,999"] <- "3. $50,000-80,000"
+anes_data$income[anes_data$income == "13. $70,000-74,999"] <- "3. $50,000-80,000"
+anes_data$income[anes_data$income == "14. $75,000-79,999"] <- "4. $50,000-80,000"
+anes_data$income[anes_data$income == "15. $80,000-89,999"] <- "4. $80,000-125,000"
+anes_data$income[anes_data$income == "16. $90,000-99,999"] <- "4. $80,000-125,000"
+anes_data$income[anes_data$income == "17. $100,000-109,999"] <- "4. $80,000-125,000"
+anes_data$income[anes_data$income == "18. $110,000-124,999"] <- "4. $80,000-125,000"
+anes_data$income[anes_data$income == "19. $125,000-149,999"] <- "5. $125,000+"
+anes_data$income[anes_data$income == "20. $150,000-174,999"] <- "5. $125,000+"
+anes_data$income[anes_data$income == "21. $175,000-249,999"] <- "5. $125,000+"
+anes_data$income[anes_data$income == "22. $250,000 or more"] <- "5. $125,000+"
+anes_data$income[is.na(anes_data$income)] <- "6. Refused"
+anes_data$income <- as.factor(anes_data$income)
+freq(anes_data$income, cum = TRUE)
+#Guide:
+#1. Under $9,999 2. $10,000-14,999 #3. $15,000-19,999 4. $20,000-24,999 #5. $25,000-29,999 6. $30,000-34,999
+#7. $35,000-39,999 8. $40,000-44,999 #9. $45,000-49,999 10. $50,000-59,999 #11. $60,000-64,999 12. $65,000-69,999
+#13. $70,000-74,999 14. $75,000-79,999 #15. $80,000-89,999 16. $90,000-99,999 #17. $100,000-109,999 18. $110,000-124,999
+#19. $125,000-149,999 20. $150,000-174,999 #21. $175,000-249,999 22. $250,000 or more
+freq(anes_data$income, cum = TRUE)
 
 
-#Political Interest
+
+##Motivations
+#Political Interest-Follows Politics
 names(anes_data)[names(anes_data) == "V201005"] <- "political_interest"
 anes_data$political_interest <- as.factor(anes_data$political_interest)
 
-#Religiosity
-names(anes_data)[names(anes_data) == "V201453"] <- "religiosity"
-anes_data$religiosity <- as.factor(anes_data$religiosity)
+#Follows Campaigns
+names(anes_data)[names(anes_data) == "V201006"] <- "campaign_interest"
+anes_data$campaign_interest <- as.factor(anes_data$campaign_interest)
 
-#Sense of Efficacy
-names(anes_data)[names(anes_data) == "V202212"] <- "efficacy"
-anes_data$efficacy <- as.factor(anes_data$efficacy)
+#Group Consciousness- Feeling Thermometer
+names(anes_data)[names(anes_data) == "V202166"] <- "gay_feeling_therm"
+anes_data$gay_feeling_therm <- as.numeric(anes_data$gay_feeling_therm)
+
+#Efficacy-No say in government
+names(anes_data)[names(anes_data) == "V202213"] <- "representation_efficacy"
+anes_data$representation_efficacy <- as.factor(anes_data$representation_efficacy)
+
+#Efficacy-How well they understand political issues
+names(anes_data)[names(anes_data) == "V202215"] <- "knowledge_efficacy"
+anes_data$knowledge_efficacy <- as.factor(anes_data$knowledge_efficacy)
+
+#Efficacy- Public Officials don't care
+names(anes_data)[names(anes_data) == "V202212"] <- "public_efficacy"
+anes_data$public_efficacy <- as.factor(anes_data$public_efficacy)
 
 
-#Reexamine new additive index
 
-#Mobilization
+##Mobilization
 #Did someone talk to Respondent about Voting
 names(anes_data)[names(anes_data) == "V202008"] <- "approached"
 anes_data$approached <- as.factor(anes_data$approached)
 
+#Contacted by party
+anes_data[anes_data == "1. Someone from the political parties talked to me about the 2020 campaign"] <- "1"
+anes_data[anes_data == "2. No one from the political parties talked to me about the 2020 campaign"] <- "0"
+names(anes_data)[names(anes_data) == "V202005"] <- "party_mobil"
 
-###Agent of Political Participation
+#Contacted by non-party
+names(anes_data)[names(anes_data) == "V202007"] <- "non_party_mobil"
 
-##Electoral Participation- examine using logistic regression for binary
 
-#When Respondent Registered To Vote
-names(anes_data)[names(anes_data) == "V202056"] <- "time_reg"
-anes_data$time_reg <- as.factor(anes_data$time_reg)
+
+
+###Dependent Variables###########
+anes_data[anes_data == "2. No"] <- "0"
+anes_data[anes_data == "1. Yes"] <- "1"
+anes_data[anes_data == "1. Have done this in past 12 months"] <- "1"
+anes_data[anes_data == "2. Have not done this in the past 12 months"] <- "0"
+anes_data[anes_data == "1. Yes, have done this in the past 12 months"] <- "1"
+anes_data[anes_data == "2. No, have not done this"] <- "0"
+anes_data[anes_data == "1. Yes, someone did"] <- "1"
+anes_data[anes_data == "2. No, no one did"] <- "0"
+
+
+##Donations
+#Contribute money to Candidate
+names(anes_data)[names(anes_data) == "V202017"] <- "candidate_donation"
+
+#Contribute money to Party
+names(anes_data)[names(anes_data) == "V202019"] <- "party_donation"
+
+#Contribute money to Political Group
+names(anes_data)[names(anes_data) == "V202021"] <- "pol_group_donation"
+
+#Contribute money to Issue Group
+names(anes_data)[names(anes_data) == "V202028"] <- "iss_group_donation"
+
+#Additive index
+donation_frame <- dplyr::select(anes_data, candidate_donation, party_donation, pol_group_donation, iss_group_donation)
+cronbach.alpha(donation_frame, CI = TRUE, B = 500, na.rm = TRUE)
+anes_data <- mutate(anes_data, donation_index = as.numeric(candidate_donation) + as.numeric(party_donation) + as.numeric(pol_group_donation) + as.numeric(iss_group_donation))
+
+
+##Electoral/Campaigning Participation
 
 #Registered to Vote
 names(anes_data)[names(anes_data) == "V201008"] <- "registered"
@@ -134,56 +207,30 @@ anes_data$voted[anes_data$voted == "3. I usually vote, but didn't this time"] <-
 anes_data$voted[anes_data$voted == "2. I thought about voting this time, but didn't"] <- 0
 anes_data$voted <- as.numeric(anes_data$voted)
 
-##Non-Electoral Participation
-
 #Did Respondent talk to someone about Voting
-anes_data[anes_data == "2. No"] <- "0"
-anes_data[anes_data == "1. Yes"] <- "1"
-anes_data[anes_data == "1. Have done this in past 12 months"] <- "1"
-anes_data[anes_data == "2. Have not done this in the past 12 months"] <- "0"
 names(anes_data)[names(anes_data) == "V202009"] <- "advocate"
+anes_data$advocate <- as.numeric(anes_data$advocate)
 
 #Go to political meetings, rallies and speeches in support of political candidate
 names(anes_data)[names(anes_data) == "V202014"] <- "attendee"
+anes_data$attendee <- as.numeric(anes_data$attendee)
 
 #Wear Campaign sticker/button
 names(anes_data)[names(anes_data) == "V202015"] <- "button"
+anes_data$button <- as.numeric(anes_data$button)
 
 #Work for Candidate
 names(anes_data)[names(anes_data) == "V202016"] <- "campaign_worker"
+anes_data$campaign_worker <- as.numeric(anes_data$campaign_worker)
 
-#Contribute money to Candidate
-names(anes_data)[names(anes_data) == "V202017"] <- "candidate_donation"
+#Additive Index
+electoral_frame <- dplyr::select(anes_data, registered, voted, advocate, attendee, button, campaign_worker)
+electoral_frame1 <- dplyr::select(anes_data, advocate, campaign_worker)
+cronbach.alpha(electoral_frame1, CI = TRUE, B = 50, na.rm = TRUE)
+anes_data <- mutate(anes_data, electoral_index = as.numeric(candidate_donation) + as.numeric(party_donation) + as.numeric(pol_group_donation) + as.numeric(iss_group_donation))
 
-#Contribute money to Party
-names(anes_data)[names(anes_data) == "V202019"] <- "party_donation"
 
-#Contribute money to Political Group
-names(anes_data)[names(anes_data) == "V202021"] <- "group_donation"
-
-#Discuss politics with family or friends
-names(anes_data)[names(anes_data) == "V202022"] <- "discuss_politics"
-
-#How Many Days in Past Week Discussed Politics with Family or friends
-anes_data$V202023[anes_data$V202023 == "0. Zero days"] <- 0
-anes_data$V202023[anes_data$V202023 == "1. One day"] <- 1
-anes_data$V202023[anes_data$V202023 == "2. Two days"] <- 2
-anes_data$V202023[anes_data$V202023 == "3. Three days"] <- 3
-anes_data$V202023[anes_data$V202023 == "4. Four days"] <- 4
-anes_data$V202023[anes_data$V202023 == "5. Five days"] <- 5
-anes_data$V202023[anes_data$V202023 == "6. Six days"] <- 6
-anes_data$V202023[anes_data$V202023 == "7. Seven days"] <- 7
-names(anes_data)[names(anes_data) == "V202023"] <- "frequency_discuss"
-anes_data$frequency_discuss <- as.numeric(anes_data$frequency_discuss)
-
-#Binary Talking Politics
-anes_data$frequency_discuss1 <- anes_data$frequency_discuss
-levels(anes_data$frequency_discuss1)[c(1,2,3)] <- 0
-levels(anes_data$frequency_discuss1)[c(4,5,6,7)] <- 1
-
-#Gotten in a Political Argument
-names(anes_data)[names(anes_data) == "V202024"] <- "political_argument"
-
+##Governmental/Non-Electoral Participation
 #Protest or Demonstration
 names(anes_data)[names(anes_data) == "V202025"] <- "protest"
 
@@ -193,8 +240,29 @@ names(anes_data)[names(anes_data) == "V202026"] <- "petition"
 #Comment Posted Online
 names(anes_data)[names(anes_data) == "V202029"] <- "comment_online"
 
-#Additive index
-anes_data <- mutate(anes_data, additive_index = as.numeric(advocate) + as.numeric(attendee) + as.numeric(button) + as.numeric(campaign_worker) + as.numeric(candidate_donation) + as.numeric(party_donation) + as.numeric(group_donation) + as.numeric(discuss_politics) + as.numeric(frequency_discuss1) + as.numeric(political_argument) + as.numeric(protest) + as.numeric(petition) + as.numeric(comment_online))
+#Contacting Federal elected
+names(anes_data)[names(anes_data) == "V202034"] <- "federal_elected"
+
+#Contacting Federal non-elected
+names(anes_data)[names(anes_data) == "V202036"] <- "federal_non_elected"
+
+#Contacting State/local elected
+names(anes_data)[names(anes_data) == "V202038"] <- "state_elected"
+
+#Contacting State/local non-elected
+names(anes_data)[names(anes_data) == "V202040"] <- "state_non_elected"
+
+#Working with community members to solve a problem
+names(anes_data)[names(anes_data) == "V202031"] <- "community_issue"
+
+#Attending a local meeting
+names(anes_data)[names(anes_data) == "V202032"] <- "community_meeting"
+
+#Additive Index
+non_electoral_frame <- dplyr::select(anes_data, protest, petition, comment_online, federal_elected, federal_non_elected, state_elected, state_non_elected, community_issue, community_meeting)
+cronbach.alpha(non_electoral_frame, CI = TRUE, B = 500, na.rm = TRUE)
+anes_data <- mutate(anes_data, non_electoral_index = as.numeric(federal_non_elected) + as.numeric(state_elected) + as.numeric(state_non_elected) + as.numeric(community_issue) + as.numeric(community_meeting) + as.numeric(federal_elected) + as.numeric(protest) + as.numeric(petition) + as.numeric(comment_online))
+
 
 ###Survey Data
 
