@@ -51,7 +51,6 @@ anes_data$V201600[anes_data$V201600 == "2. Female"] <- 0
 anes_data$V201600[anes_data$V201600 == "1. Male"] <- 1
 names(anes_data)[names(anes_data) == "V201600"] <- "male"
 anes_data$male <- as.factor(anes_data$male)
-#Guide: 1. Male 2. Female
 
 #Race
 names(anes_data)[names(anes_data) == "V201549x"] <- "race"
@@ -70,6 +69,10 @@ anes_data <- mutate(anes_data, age_square = (anes_data$age)^2)
 
 #Marriage Status
 names(anes_data)[names(anes_data) == "V201508"] <- "marriage"
+anes_data$marriage[anes_data$marriage == "2. Married: spouse absent {VOL}"] <- "1. Married: spouse present"
+anes_data$marriage[anes_data$marriage == "3. Widowed"] <- "2. Previously married"
+anes_data$marriage[anes_data$marriage == "4. Divorced"] <- "2. Previously married"
+anes_data$marriage[anes_data$marriage == "5. Separated"] <- "2. Previously married"
 anes_data$marriage <- as.factor(anes_data$marriage)
 #Guide: 1. Married: spouse present 2. Married: spouse absent 3. Widowed 4. Divorced 5. Separated 6. Never married
 
@@ -81,7 +84,7 @@ anes_data$education <- as.factor(anes_data$education)
 #4. Bachelor’s degree 5. Graduate degree
 
 
-#Income-STILL EDIT
+#Income
 names(anes_data)[names(anes_data) == "V201617x"] <- "income"
 anes_data$income[anes_data$income == "1. Under $9,999"] <- "1. Less than $25,000"
 anes_data$income[anes_data$income == "2. $10,000-14,999"] <- "1. Less than $25,000"
@@ -96,7 +99,7 @@ anes_data$income[anes_data$income == "10. $50,000-59,999"] <- "3. $50,000-80,000
 anes_data$income[anes_data$income == "11. $60,000-64,999"] <- "3. $50,000-80,000"
 anes_data$income[anes_data$income == "12. $65,000-69,999"] <- "3. $50,000-80,000"
 anes_data$income[anes_data$income == "13. $70,000-74,999"] <- "3. $50,000-80,000"
-anes_data$income[anes_data$income == "14. $75,000-79,999"] <- "4. $50,000-80,000"
+anes_data$income[anes_data$income == "14. $75,000-79,999"] <- "3. $50,000-80,000"
 anes_data$income[anes_data$income == "15. $80,000-89,999"] <- "4. $80,000-125,000"
 anes_data$income[anes_data$income == "16. $90,000-99,999"] <- "4. $80,000-125,000"
 anes_data$income[anes_data$income == "17. $100,000-109,999"] <- "4. $80,000-125,000"
@@ -108,55 +111,82 @@ anes_data$income[anes_data$income == "22. $250,000 or more"] <- "5. $125,000+"
 anes_data$income[is.na(anes_data$income)] <- "6. Refused"
 anes_data$income <- as.factor(anes_data$income)
 freq(anes_data$income, cum = TRUE)
-#Guide:
-#1. Under $9,999 2. $10,000-14,999 #3. $15,000-19,999 4. $20,000-24,999 #5. $25,000-29,999 6. $30,000-34,999
-#7. $35,000-39,999 8. $40,000-44,999 #9. $45,000-49,999 10. $50,000-59,999 #11. $60,000-64,999 12. $65,000-69,999
-#13. $70,000-74,999 14. $75,000-79,999 #15. $80,000-89,999 16. $90,000-99,999 #17. $100,000-109,999 18. $110,000-124,999
-#19. $125,000-149,999 20. $150,000-174,999 #21. $175,000-249,999 22. $250,000 or more
-freq(anes_data$income, cum = TRUE)
+
 
 
 
 ##Motivations
 #Political Interest-Follows Politics
 names(anes_data)[names(anes_data) == "V201005"] <- "political_interest"
-anes_data$political_interest <- as.factor(anes_data$political_interest)
+anes_data$political_interest[anes_data$political_interest == "1. Always"] <- "1"
+anes_data$political_interest[anes_data$political_interest == "2. Most of the time"] <- "0.75"
+anes_data$political_interest[anes_data$political_interest == "3. About half the time"] <- "0.50"
+anes_data$political_interest[anes_data$political_interest == "4. Some of the time"] <- "0.25"
+anes_data$political_interest[anes_data$political_interest == "5. Never"] <- "0"
+anes_data$political_interest <- as.numeric(anes_data$political_interest)
 
 #Follows Campaigns
 names(anes_data)[names(anes_data) == "V201006"] <- "campaign_interest"
-anes_data$campaign_interest <- as.factor(anes_data$campaign_interest)
+anes_data$campaign_interest[anes_data$campaign_interest == "1. Very much interested"] <- "1"
+anes_data$campaign_interest[anes_data$campaign_interest == "2. Somewhat interested"] <- "0.50"
+anes_data$campaign_interest[anes_data$campaign_interest == "3. Not much interested"] <- "0"
+anes_data$campaign_interest <- as.numeric(anes_data$campaign_interest)
+
+#Political Interest Index
+interest_frame <- dplyr::select(anes_data, campaign_interest, political_interest)
+cronbach.alpha(interest_frame, CI = TRUE, B = 500, na.rm = TRUE)
+anes_data <- mutate(anes_data, interest_index = (campaign_interest + political_interest)/2)
 
 #Group Consciousness- Feeling Thermometer
 names(anes_data)[names(anes_data) == "V202166"] <- "gay_feeling_therm"
 anes_data$gay_feeling_therm <- as.numeric(anes_data$gay_feeling_therm)
+anes_data <- mutate(anes_data, gay_feeling_scaled = (gay_feeling_therm)/100)
+
 
 #Efficacy-No say in government
 names(anes_data)[names(anes_data) == "V202213"] <- "representation_efficacy"
-anes_data$representation_efficacy <- as.factor(anes_data$representation_efficacy)
+anes_data$representation_efficacy[anes_data$representation_efficacy == "1. Agree strongly"] <- "0"
+anes_data$representation_efficacy[anes_data$representation_efficacy == "2. Agree somewhat"] <- "0.25"
+anes_data$representation_efficacy[anes_data$representation_efficacy == "3. Neither agree nor disagree"] <- "0.50"
+anes_data$representation_efficacy[anes_data$representation_efficacy == "4. Disagree somewhat"] <- "0.75"
+anes_data$representation_efficacy[anes_data$representation_efficacy == "5. Disagree strongly"] <- "1"
+anes_data$representation_efficacy <- as.numeric(anes_data$representation_efficacy)
 
 #Efficacy-How well they understand political issues
 names(anes_data)[names(anes_data) == "V202215"] <- "knowledge_efficacy"
-anes_data$knowledge_efficacy <- as.factor(anes_data$knowledge_efficacy)
+anes_data$knowledge_efficacy[anes_data$knowledge_efficacy == "1. Extremely well"] <- "1"
+anes_data$knowledge_efficacy[anes_data$knowledge_efficacy == "2. Very well"] <- "0.75"
+anes_data$knowledge_efficacy[anes_data$knowledge_efficacy == "3. Moderately well"] <- "0.50"
+anes_data$knowledge_efficacy[anes_data$knowledge_efficacy == "4. Slightly well"] <- "0.25"
+anes_data$knowledge_efficacy[anes_data$knowledge_efficacy == "5. Not well at all"] <- "0"
+anes_data$knowledge_efficacy <- as.numeric(anes_data$knowledge_efficacy)
 
 #Efficacy- Public Officials don't care
 names(anes_data)[names(anes_data) == "V202212"] <- "public_efficacy"
-anes_data$public_efficacy <- as.factor(anes_data$public_efficacy)
+anes_data$public_efficacy[anes_data$public_efficacy == "1. Agree strongly"] <- "0"
+anes_data$public_efficacy[anes_data$public_efficacy == "2. Agree somewhat"] <- "0.25"
+anes_data$public_efficacy[anes_data$public_efficacy == "3. Neither agree nor disagree"] <- "0.50"
+anes_data$public_efficacy[anes_data$public_efficacy == "4. Disagree somewhat"] <- "0.75"
+anes_data$public_efficacy[anes_data$public_efficacy == "5. Disagree strongly"] <- "1"
+anes_data$public_efficacy <- as.numeric(anes_data$public_efficacy)
+
+#Efficacy Index
+efficacy_frame <- dplyr::select(anes_data, representation_efficacy, public_efficacy)
+cronbach.alpha(efficacy_frame, CI = TRUE, B = 500, na.rm = TRUE)
+anes_data <- mutate(anes_data, external_efficacy_index = (representation_efficacy + public_efficacy)/2)
 
 
 
 ##Mobilization
 #Did someone talk to Respondent about Voting
 names(anes_data)[names(anes_data) == "V202008"] <- "approached"
+anes_data$approached[anes_data$approached == "1. Yes, someone did"] <- "1"
+anes_data$approached[anes_data$approached == "2. No, no one did"] <- "0"
 anes_data$approached <- as.factor(anes_data$approached)
 
-#Contacted by party
-anes_data[anes_data == "1. Someone from the political parties talked to me about the 2020 campaign"] <- "1"
-anes_data[anes_data == "2. No one from the political parties talked to me about the 2020 campaign"] <- "0"
-names(anes_data)[names(anes_data) == "V202005"] <- "party_mobil"
 
 #Contacted by non-party
 names(anes_data)[names(anes_data) == "V202007"] <- "non_party_mobil"
-
 
 
 
@@ -167,8 +197,7 @@ anes_data[anes_data == "1. Have done this in past 12 months"] <- "1"
 anes_data[anes_data == "2. Have not done this in the past 12 months"] <- "0"
 anes_data[anes_data == "1. Yes, have done this in the past 12 months"] <- "1"
 anes_data[anes_data == "2. No, have not done this"] <- "0"
-anes_data[anes_data == "1. Yes, someone did"] <- "1"
-anes_data[anes_data == "2. No, no one did"] <- "0"
+
 
 
 ##Donations
@@ -225,8 +254,7 @@ anes_data$campaign_worker <- as.numeric(anes_data$campaign_worker)
 
 #Additive Index
 electoral_frame <- dplyr::select(anes_data, registered, voted, advocate, attendee, button, campaign_worker)
-electoral_frame1 <- dplyr::select(anes_data, advocate, campaign_worker)
-cronbach.alpha(electoral_frame1, CI = TRUE, B = 50, na.rm = TRUE)
+cronbach.alpha(electoral_frame, CI = TRUE, B = 50, na.rm = TRUE)
 anes_data <- mutate(anes_data, electoral_index = as.numeric(candidate_donation) + as.numeric(party_donation) + as.numeric(pol_group_donation) + as.numeric(iss_group_donation))
 
 
@@ -267,108 +295,196 @@ anes_data <- mutate(anes_data, non_electoral_index = as.numeric(federal_non_elec
 ###Survey Data
 
 #Set Survey
-anes_data <- subset(anes_data, !is.na(weights))
-anes_data <- svydesign(id=~psu, weights=~weights, strata=~strata, nest=TRUE, survey.lonely.psu = "adjust", data=anes_data)
+anes_data1 <- subset(anes_data, !is.na(weights))
+anes_data_weighted <- svydesign(id=~psu, weights=~weights, strata=~strata, nest=TRUE, survey.lonely.psu = "adjust", data=anes_data1)
 
+#Subpopulations
+anes_data_sexmin <- subset(anes_data_weighted, orientation1 == 1)
+anes_data_hetero <- subset(anes_data_weighted, orientation1 == 0) 
 ###Analysis############################################################################
 
 ##Visualizations
 #Box and Whisker Plot
-plot(anes_data$additive_index ~ anes_data$orientation)
-
-##Tests
-
-#Means
-svyby(~additive_index, ~orientation, design=anes_data, na.rm=TRUE, svymean)
-
-#T test of Means
-t.test(additive_index ~ orientation1, data=anes_data, var.equal=TRUE)
-
-#Linear Regression with all controls
-fit <- svyglm(additive_index ~ orientation1 + sex + race + income + agecat1 + marriage + education + political_interest + religiosity + efficacy + party_reg + approached, design=anes_data)
-summary(fit)
-anova(fit) # anova table
-tab_model(fit)
-
-#Linear Regression with all controls- dropped political interest (lowered p-value from .87 to .60), mobilization (lowered p-value from .60 to .54), party registration (dropped from .54 to .15), Religiosity (EXTREME effects-- dropped from .15 to .00001)
-fit1 <- svyglm(additive_index ~ orientation1 + sex + race + income + agecat1 + marriage + education + political_interest + efficacy + party_reg + approached, design=anes_data)
-summary(fit1)
-anova(fit1) # anova table
-tab_model(fit1)
-
-#Logistic Regression
-register_logit <- svyglm(registered ~ orientation1 + sex + race + income + agecat1 + marriage + education, design = anes_data, family = "binomial")
-summary(register_logit)
-tab_model(register_logit)
-
-#Logistic Regression
-voting_logit <- svyglm(voted ~ orientation1 + sex + race + income + agecat1 + marriage + education, design = anes_data, family = "binomial")
-summary(voting_logit)
-tab_model(voting_logit)
+plot(anes_data$additive_index ~ anes_data$orientation1)
 
 
 ###Cross-tabulations that actually work!
 
 #Descriptives:
-crosstab(anes_data$sex, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+crosstab(anes_data$male, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
 crosstab(anes_data$race, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-crosstab(anes_data$agecat1, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~age, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 crosstab(anes_data$marriage, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
 crosstab(anes_data$education, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
 crosstab(anes_data$income, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-crosstab(anes_data$political_interest, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-crosstab(anes_data$efficacy, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-crosstab(anes_data$religiosity, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+
+#Motivations:
+svyby(~interest_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+desc1 <- svyglm(interest_index ~ orientation1, design=anes_data_weighted)
+summary(desc1)
+svyby(~gay_feeling_therm, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+desc2 <- svyglm(gay_feeling_therm ~ orientation1, design=anes_data_weighted)
+summary(desc2)
+svyby(~external_efficacy_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+desc3 <- svyglm(external_efficacy_index ~ orientation1, design=anes_data_weighted)
+summary(desc3)
+svyby(~knowledge_efficacy, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+desc4 <- svyglm(knowledge_efficacy ~ orientation1, design=anes_data_weighted)
+summary(desc4)
+
+#Mobilization:
+crosstab(anes_data$party_mobil, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+crosstab(anes_data$non_party_mobil, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
 crosstab(anes_data$approached, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-crosstab(anes_data$party_reg, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-
-View(anes_data$orientation1)
-#Electoral participation efforts
-crosstab(anes_data$registered, anes_data$orientation1, prop.c=T, plot=F, digits=1, weight=anes_data$weights)
-crosstab(anes_data$voted, anes_data$orientation1, prop.c=T, plot=F, digits=1, weight=anes_data$weights)
-svychisq(~registered + orientation1, anes_data, statistic="adjWald")
 
 
 
-#Another attempt at Crosstabulations with for loops that sucks:
-l=c('orientation1')
-for (i in l) {
-  crosstable1 <- svytable(~registered + i, design = anes_data)
-  crosstable1 <- tibble(as.data.frame(crosstable1))
-  crosstable1 <- pivot_wider(crosstable1, 
-                             names_from = "i", 
-                             values_from = "Freq")
-  View(crosstable1)
-  svychisq(~registered + i, anes_data, statistic="adjWald")
-}
-#####The method below works (gives weighted gfrequency tables) but it's stupid
+#####Analysis#########
 
-##Cross Tabs
-#Registering
-register_orientation <- svytable(~registered + orientation1, design = anes_data)
-register_orientation <- tibble(as.data.frame(register_orientation))
-register_orientation <- pivot_wider(register_orientation, 
-                                    names_from = "orientation1", 
-                                    values_from = "Freq")
-View(register_orientation)
-svychisq(~registered + orientation1, anes_data, statistic="adjWald")
+###No controls, just means (Table 2)
+#Donation Index
+svyby(~donation_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+donation_raw <- svyglm(donation_index ~ orientation1, design=anes_data_weighted)
+summary(donation_raw)
+
+#Non-Electoral Participation Index
+svyby(~non_electoral_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+non_electoral_raw <- svyglm(non_electoral_index ~ orientation1, design=anes_data_weighted)
+summary(non_electoral_raw)
+
+#Electoral Participation Activities
+#Registering to vote
+crosstab(anes_data$registered, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+registered_raw <- svyglm(registered ~ orientation1, design=anes_data_weighted)
+summary(registered_raw)
 
 #Voting
-vote_orientation <- svytable(~voted + orientation1, design = anes_data)
-vote_orientation <- tibble(as.data.frame(vote_orientation))
-vote_orientation <- pivot_wider(vote_orientation, 
-                                names_from = "orientation1", 
-                                values_from = "Freq")
-View(vote_orientation)
+crosstab(anes_data$voted, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+voted_raw <- svyglm(voted ~ orientation1, design=anes_data_weighted)
+summary(voted_raw)
+
+#Talking to someone about voting
+crosstab(anes_data$advocate, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+advocate_raw <- svyglm(advocate ~ orientation1, design=anes_data_weighted)
+summary(advocate_raw)
+
+#Wearing a campaign button
+crosstab(anes_data$button, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+button_raw <- svyglm(button ~ orientation1, design=anes_data_weighted)
+summary(button_raw)
+
+#Campaign worker
+crosstab(anes_data$campaign_worker, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+campaign_worker_raw <- svyglm(campaign_worker ~ orientation1, design=anes_data_weighted)
+summary(campaign_worker_raw)
+
+#Attending a campaign Event
+crosstab(anes_data$attendee, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+attendee_raw <- svyglm(attendee ~ orientation1, design=anes_data_weighted)
+summary(attendee_raw)
+
+###With Demographics (Table 3)
+#Donation Index
+donation_demos <- svyglm(donation_index ~ orientation1 + male + race + marriage + age + age_square, design=anes_data_weighted)
+summary(donation_demos)
+tab_model(donation_demos, show.se=TRUE, digits = 3)
+
+#Non-Electoral Participation Index
+non_electoral_demos <- svyglm(non_electoral_index ~ orientation1 + male + race + marriage + age + age_square, design=anes_data_weighted)
+summary(non_electoral_demos)
+tab_model(non_electoral_demos, show.se=TRUE, digits = 3)
+
+#Voter Participation
+voted_demos <- svyglm(voted ~ orientation1 + male + race + marriage + age + age_square, design=anes_data_weighted)
+summary(voted_demos)
+tab_model(voted_demos, show.se=TRUE, digits = 3)
 
 
-#Trash Below
-anes_data$additive_index1 <- factor(anes_data$additive_index)
-index_orientation_table <- ctab(anes_data$orientation, anes_data$additive_index1, type="r")
-write.csv(index_orientation_table, "C:\\Cameron Files\\Vanderbilt\\Research\\Independent Projects\\ANES Summer 2021\\anes_table.csv") 
-print(index_orientation_table)
-write.table(index_orientation_table, "clipboard", sep="\t", row.names=FALSE)
-typeof(index_orientation_table)
 
-write.xlsx(index_orientation_table, "C:\\Cameron Files\\Vanderbilt\\Research\\Independent Projects\\ANES Summer 2021\\anes_table.xlsx")
+#######TABLE 4##########
 
+###Donation Index 
+
+#Demos + Resources
+donation_t4v1 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income, design=anes_data_weighted)
+summary(donation_t4v1)
+tab_model(donation_t4v1, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations
+donation_t4v2 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
+summary(donation_t4v2)
+tab_model(donation_t4v2, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations + Mobilization
+donation_t4v3 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+summary(donation_t4v3)
+tab_model(donation_t4v3, show.se=TRUE, digits = 3)
+
+
+###Non-Electoral Index 
+
+#Demos + Resources
+nonelectoral_t4v1 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income, design=anes_data_weighted)
+summary(nonelectoral_t4v1)
+tab_model(nonelectoral_t4v1, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations
+nonelectoral_t4v2 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
+summary(nonelectoral_t4v2)
+tab_model(nonelectoral_t4v2, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations + Mobilization
+nonelectoral_t4v3 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+summary(nonelectoral_t4v3)
+tab_model(nonelectoral_t4v3, show.se=TRUE, digits = 3)
+
+###Voter Participation
+
+#Demos + Resources
+vote_t4v1 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income, design=anes_data_weighted)
+summary(vote_t4v1)
+tab_model(vote_t4v1, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations
+vote_t4v2 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
+summary(vote_t4v2)
+tab_model(vote_t4v2, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations + Mobilization
+vote_t4v3 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+summary(vote_t4v3)
+tab_model(vote_t4v3, show.se=TRUE, digits = 3)
+
+
+#####Table 5#####
+
+
+#Donation Index for Sexual Minorities
+donation_effects_sexmin <- svyglm(donation_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+summary(donation_effects_sexmin)
+tab_model(donation_effects_sexmin, show.se=TRUE, digits = 3)
+
+#Donation Index for Heterosexuals
+donation_effects_hetero <- svyglm(donation_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+summary(donation_effects_hetero)
+tab_model(donation_effects_hetero, show.se=TRUE, digits = 3)
+
+#Non Electoral Index for Sexual Minorities
+nonelect_effects_sexmin <- svyglm(non_electoral_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+summary(nonelect_effects_sexmin)
+tab_model(nonelect_effects_sexmin, show.se=TRUE, digits = 3)
+
+#Non Electoral Index for Heterosexuals
+nonelect_effects_hetero <- svyglm(non_electoral_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+summary(nonelect_effects_hetero)
+tab_model(nonelect_effects_hetero, show.se=TRUE, digits = 3)
+
+#Voter Turnout for Sexual Minorities
+vote_effects_sexmin <- svyglm(voted ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+summary(vote_effects_sexmin)
+tab_model(vote_effects_sexmin, show.se=TRUE, digits = 3)
+
+#Voter Turnout for Heterosexuals
+vote_effects_hetero <- svyglm(voted ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+summary(vote_effects_hetero)
+tab_model(vote_effects_hetero, show.se=TRUE, digits = 3)
