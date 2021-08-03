@@ -7,8 +7,10 @@ library(readr)
 library(dplyr)
 library(tidyr)
 library(gmodels)
+library(ggplot2)
 library(openxlsx)
 library(catspec)
+library(RColorBrewer)
 library(sjPlot)
 library(sjmisc)
 library(sjlabelled)
@@ -17,7 +19,7 @@ library(descr)
 library(ltm)
 anes_data <- read.csv("C:\\Cameron Files\\Vanderbilt\\Research\\Independent Projects\\ANES Summer 2021\\anes_data.csv", na.strings = c("-9. Refused", "998. Don't know", "-5. Interview breakoff (sufficient partial IW)","-4. Technical error","-8. Don't know","-2. Missing, other specify not coded for preliminary release", "-1. Inapplicable", "-6. No post-election interview", "-7. No post-election data, deleted due to incomplete interview"))
 anes_data <- as_tibble(anes_data) 
-anes_data <- dplyr::select(anes_data, V200010b, V201005, V201006, V200010c, V200010d, V201453, V202212, V202213, V202215, V201601, V201600, V201549x, V201617x, V201507x, V201508, V201511x, V201018, V202008, V202056, V201008, V202066, V202005, V202007, V202009, V202014, V202015, V202016, V202017, V202019, V202021, V202022, V202023, V202024, V202025, V202026, V202028, V202029, V202031, V202032, V202034, V202036, V202038, V202040, V202166)
+anes_data <- dplyr::select(anes_data, V200010b, V201005, V201006, V200010c, V200010d, V201453, V202212, V202213, V202215, V201601, V201600, V201549x, V201617x, V201507x, V201508, V201511x, V201018, V202008, V202056, V201008, V202066, V202005, V202007, V202009, V202014, V202015, V202016, V202017, V202019, V202021, V202022, V202023, V202024, V202025, V202026, V202028, V202029, V202031, V202032, V202034, V202036, V202038, V202040, V202166, V201435, V201018, V201231x)
 
 
 ######Clean up Variables
@@ -60,12 +62,13 @@ anes_data$race[anes_data$race == "6. Multiple races, non-Hispanic"] <- "All othe
 anes_data$race <- as.factor(anes_data$race)
 
 #Age Continuous
-names(anes_data)[names(anes_data) == "V201507x"] <- "age"
-anes_data$age[anes_data$age == "80. Age 80 or older"] <- 80
-anes_data$age <- as.numeric(anes_data$age)
+names(anes_data)[names(anes_data) == "V201507x"] <- "age1"
+anes_data$age1[anes_data$age1 == "80. Age 80 or older"] <- 80
+anes_data$age1 <- as.numeric(anes_data$age1)
+anes_data <- mutate(anes_data, age = ((anes_data$age1)-18)/62)
 
 #Age Square
-anes_data <- mutate(anes_data, age_square = (anes_data$age)^2)
+anes_data <- mutate(anes_data, age_square = (anes_data$age1)^2)
 
 #Marriage Status
 names(anes_data)[names(anes_data) == "V201508"] <- "marriage"
@@ -142,6 +145,23 @@ names(anes_data)[names(anes_data) == "V202166"] <- "gay_feeling_therm"
 anes_data$gay_feeling_therm <- as.numeric(anes_data$gay_feeling_therm)
 anes_data <- mutate(anes_data, gay_feeling_scaled = (gay_feeling_therm)/100)
 
+#Political Party
+names(anes_data)[names(anes_data) == "V201018"] <- "partyid"
+anes_data$partyid[anes_data$partyid == "5. Other {SPECIFY}"] <- "1. Other, Independent, or None"
+anes_data$partyid[anes_data$partyid == "4. None or ‘independent’"] <- "1. Other, Independent, or None"
+anes_data$partyid[anes_data$partyid == "1. Democratic party"] <- "3. Democratic Party"
+anes_data$partyid <- as.factor(anes_data$partyid)
+
+#Partisanship
+names(anes_data)[names(anes_data) == "V201231x"] <- "partisanship"
+anes_data$partisanship[anes_data$partisanship == "1. Strong Democrat"] <- "1"
+anes_data$partisanship[anes_data$partisanship == "7. Strong Republican"] <- "1"
+anes_data$partisanship[anes_data$partisanship == "2. Not very strong Democrat"] <- "0.67"
+anes_data$partisanship[anes_data$partisanship == "6. Not very strong Republican"] <- "0.67"
+anes_data$partisanship[anes_data$partisanship == "3. Independent-Democrat"] <- "0.33"
+anes_data$partisanship[anes_data$partisanship == "3. Independent-Democrat"] <- "0.33"
+anes_data$partisanship[anes_data$partisanship == "4. Independent"] <- "0"
+anes_data$partisanship <- as.numeric(anes_data$partisanship)
 
 #Efficacy-No say in government
 names(anes_data)[names(anes_data) == "V202213"] <- "representation_efficacy"
@@ -304,9 +324,21 @@ anes_data_hetero <- subset(anes_data_weighted, orientation1 == 0)
 ###Analysis############################################################################
 
 ##Visualizations
-#Box and Whisker Plot
-plot(anes_data$additive_index ~ anes_data$orientation1)
+#Figure 1: Donation distributions for Sexual Minorities and heterosexuals
+anes_data_sexmin_tab <- subset(anes_data1, orientation1 == 1)
+anes_data_hetero_tab <- subset(anes_data1, orientation1 == 0) 
+svytable(~donation_index, design = anes_data_sexmin)
+svytable(~donation_index, design = anes_data_hetero)
 
+ggplot(anes_data_sexmin_tab, aes(donation_index)) + geom_bar(binwidth=1, fill = "#4682B4")
+ggplot(anes_data_hetero_tab, aes(donation_index)) + geom_bar(binwidth=1, fill = "#4682B4")
+
+#Figure 2: Non Electoral Index distributions for Sexual Minorities and heterosexuals
+svytable(~non_electoral_index, design = anes_data_sexmin)
+svytable(~non_electoral_index, design = anes_data_hetero)
+
+ggplot(anes_data_sexmin_tab, aes(non_electoral_index)) + geom_bar(binwidth=1, fill = "#4682B4")
+ggplot(anes_data_hetero_tab, aes(non_electoral_index)) + geom_bar(binwidth=1, fill = "#4682B4")
 
 ###Cross-tabulations that actually work!
 
@@ -411,12 +443,12 @@ summary(donation_t4v1)
 tab_model(donation_t4v1, show.se=TRUE, digits = 3)
 
 #Demos + Resources + Motivations
-donation_t4v2 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
+donation_t4v2 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
 summary(donation_t4v2)
 tab_model(donation_t4v2, show.se=TRUE, digits = 3)
 
 #Demos + Resources + Motivations + Mobilization
-donation_t4v3 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+donation_t4v3 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached + V201435, design=anes_data_weighted)
 summary(donation_t4v3)
 tab_model(donation_t4v3, show.se=TRUE, digits = 3)
 
@@ -429,12 +461,12 @@ summary(nonelectoral_t4v1)
 tab_model(nonelectoral_t4v1, show.se=TRUE, digits = 3)
 
 #Demos + Resources + Motivations
-nonelectoral_t4v2 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
+nonelectoral_t4v2 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship  + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
 summary(nonelectoral_t4v2)
 tab_model(nonelectoral_t4v2, show.se=TRUE, digits = 3)
 
 #Demos + Resources + Motivations + Mobilization
-nonelectoral_t4v3 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+nonelectoral_t4v3 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
 summary(nonelectoral_t4v3)
 tab_model(nonelectoral_t4v3, show.se=TRUE, digits = 3)
 
@@ -446,12 +478,12 @@ summary(vote_t4v1)
 tab_model(vote_t4v1, show.se=TRUE, digits = 3)
 
 #Demos + Resources + Motivations
-vote_t4v2 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
+vote_t4v2 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy, design=anes_data_weighted)
 summary(vote_t4v2)
 tab_model(vote_t4v2, show.se=TRUE, digits = 3)
 
 #Demos + Resources + Motivations + Mobilization
-vote_t4v3 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+vote_t4v3 <- svyglm(voted ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
 summary(vote_t4v3)
 tab_model(vote_t4v3, show.se=TRUE, digits = 3)
 
@@ -460,31 +492,31 @@ tab_model(vote_t4v3, show.se=TRUE, digits = 3)
 
 
 #Donation Index for Sexual Minorities
-donation_effects_sexmin <- svyglm(donation_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+donation_effects_sexmin <- svyglm(donation_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
 summary(donation_effects_sexmin)
 tab_model(donation_effects_sexmin, show.se=TRUE, digits = 3)
 
 #Donation Index for Heterosexuals
-donation_effects_hetero <- svyglm(donation_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+donation_effects_hetero <- svyglm(donation_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
 summary(donation_effects_hetero)
 tab_model(donation_effects_hetero, show.se=TRUE, digits = 3)
 
 #Non Electoral Index for Sexual Minorities
-nonelect_effects_sexmin <- svyglm(non_electoral_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+nonelect_effects_sexmin <- svyglm(non_electoral_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
 summary(nonelect_effects_sexmin)
 tab_model(nonelect_effects_sexmin, show.se=TRUE, digits = 3)
 
 #Non Electoral Index for Heterosexuals
-nonelect_effects_hetero <- svyglm(non_electoral_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+nonelect_effects_hetero <- svyglm(non_electoral_index ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_scaled + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
 summary(nonelect_effects_hetero)
 tab_model(nonelect_effects_hetero, show.se=TRUE, digits = 3)
 
 #Voter Turnout for Sexual Minorities
-vote_effects_sexmin <- svyglm(voted ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+vote_effects_sexmin <- svyglm(voted ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
 summary(vote_effects_sexmin)
 tab_model(vote_effects_sexmin, show.se=TRUE, digits = 3)
 
 #Voter Turnout for Heterosexuals
-vote_effects_hetero <- svyglm(voted ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+vote_effects_hetero <- svyglm(voted ~  male + race + marriage + age + age_square + education + income + interest_index + gay_feeling_therm + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
 summary(vote_effects_hetero)
 tab_model(vote_effects_hetero, show.se=TRUE, digits = 3)
