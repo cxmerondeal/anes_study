@@ -19,7 +19,7 @@ library(descr)
 library(ltm)
 anes_data <- read.csv("C:\\Cameron Files\\Vanderbilt\\Research\\Independent Projects\\ANES Summer 2021\\anes_data.csv", na.strings = c("-9. Refused", "998. Don't know", "-5. Interview breakoff (sufficient partial IW)","-4. Technical error","-8. Don't know","-2. Missing, other specify not coded for preliminary release", "-1. Inapplicable", "-6. No post-election interview", "-7. No post-election data, deleted due to incomplete interview"))
 anes_data <- as_tibble(anes_data) 
-anes_data <- dplyr::select(anes_data, V200010b, V201005, V201006, V200010c, V200010d, V201453, V202212, V202213, V202215, V201601, V201600, V201549x, V201617x, V201507x, V201508, V201511x, V201018, V202008, V202056, V201008, V202066, V202005, V202007, V202009, V202014, V202015, V202016, V202017, V202019, V202021, V202022, V202023, V202024, V202025, V202026, V202028, V202029, V202031, V202032, V202034, V202036, V202038, V202040, V202166, V201435, V201018, V201231x, V202160, V202161, V202164, V202183, V202174, V202185)
+anes_data <- dplyr::select(anes_data, V200010b, V201005, V201006, V200010c, V200010d, V202180, V201453, V202212, V202213, V202215, V201601, V201600, V201549x, V201617x, V201507x, V201508, V201511x, V201018, V202008, V202056, V201008, V202066, V202005, V202007, V202009, V202014, V202015, V202016, V202017, V202019, V202021, V202022, V202023, V202024, V202025, V202026, V202028, V202029, V202031, V202032, V202034, V202036, V202038, V202040, V202166, V201435, V201018, V201231x, V202160, V202161, V202164, V202183, V202174, V202185)
 
 
 ######Clean up Variables
@@ -315,6 +315,10 @@ non_electoral_frame <- dplyr::select(anes_data, protest, petition, comment_onlin
 cronbach.alpha(non_electoral_frame, CI = TRUE, B = 500, na.rm = TRUE)
 anes_data <- mutate(anes_data, non_electoral_index = as.numeric(federal_non_elected) + as.numeric(state_elected) + as.numeric(state_non_elected) + as.numeric(community_issue) + as.numeric(community_meeting) + as.numeric(federal_elected) + as.numeric(protest) + as.numeric(petition) + as.numeric(comment_online))
 
+#Large Summation of political acts
+anes_data <- mutate(anes_data, pooled_index = as.numeric(candidate_donation) + as.numeric(party_donation) + as.numeric(pol_group_donation) + as.numeric(iss_group_donation) + as.numeric(federal_non_elected) + as.numeric(state_elected) + as.numeric(state_non_elected) + as.numeric(community_issue) + as.numeric(community_meeting) + as.numeric(federal_elected) + as.numeric(protest) + as.numeric(petition) + as.numeric(comment_online) + as.numeric(voted) + as.numeric(registered) + as.numeric(advocate) + as.numeric(button) + as.numeric(campaign_worker) + as.numeric(attendee))
+pool_frame <- dplyr::select(anes_data, protest, petition, comment_online, federal_elected, federal_non_elected, state_elected, state_non_elected, community_issue, community_meeting, candidate_donation, party_donation, pol_group_donation, iss_group_donation, voted, registered, advocate, button, campaign_worker, attendee)
+cronbach.alpha(pool_frame, CI = TRUE, B = 500, na.rm = TRUE) #alpha = 0.796
 
 ###Survey Data
 
@@ -325,6 +329,11 @@ anes_data_weighted <- svydesign(id=~psu, weights=~weights, strata=~strata, nest=
 #Subpopulations
 anes_data_sexmin <- subset(anes_data_weighted, orientation1 == 1)
 anes_data_hetero <- subset(anes_data_weighted, orientation1 == 0) 
+
+### Evaluating the pooled index
+svyby(~pooled_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+pooled_regress <- svyglm(pooled_index ~ orientation1, design=anes_data_weighted)
+summary(pooled_regress)
 ###Analysis############################################################################
 
 ##Visualizations
@@ -348,14 +357,20 @@ ggplot(anes_data_hetero_tab, aes(non_electoral_index)) + geom_bar(binwidth=1, fi
 
 #Descriptives:
 crosstab(anes_data$male, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~male, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 crosstab(anes_data$race, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~race, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 svyby(~age, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 crosstab(anes_data$marriage, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~marriage, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 crosstab(anes_data$education, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~education, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 crosstab(anes_data$income, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~income, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 
 #Motivations:
 crosstab(anes_data$partyid, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
+svyby(~partyid, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 svyby(~interest_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 desc1 <- svyglm(interest_index ~ orientation1, design=anes_data_weighted)
 summary(desc1)
@@ -376,7 +391,8 @@ summary(desc5)
 crosstab(anes_data$party_mobil, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
 crosstab(anes_data$non_party_mobil, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
 crosstab(anes_data$approached, anes_data$orientation1, prop.c=T, plot=F, digits=2, chisq = TRUE, weight=anes_data$weights)
-
+svyby(~non_party_mobil, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
+svyby(~approached, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 
 
 #####Analysis#########
@@ -386,6 +402,7 @@ crosstab(anes_data$approached, anes_data$orientation1, prop.c=T, plot=F, digits=
 svyby(~donation_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
 donation_raw <- svyglm(donation_index ~ orientation1, design=anes_data_weighted)
 summary(donation_raw)
+tab_model(donation_raw)
 
 #Non-Electoral Participation Index
 svyby(~non_electoral_index, ~orientation1, design=anes_data_weighted, na.rm=TRUE, svymean)
@@ -496,6 +513,36 @@ summary(vote_t4v3)
 tab_model(vote_t4v3, show.se=TRUE, digits = 3)
 
 
+########Coefficient Plots#######
+library(coefplot)
+coefplot::multiplot(donation_raw, donation_t4v1, donation_t4v2, donation_t4v3, predictors = "orientation1", strict=TRUE)
+
+###Other Method
+#Donation
+library(forcats)
+d=data.frame(donate_coef=c("Simple Model", "+Demographics", "+Resources","+Motivations", "+Mobilization"), mean=c(0.142, 0.258, 0.254,	0.119, 0.114), lower=c(0.02, 0.138,	0.152,	0.015, 0.009), upper=c(0.26, 0.379,	0.357,	0.224, 0.215))
+d <- mutate(d, donate_coef = fct_relevel(donate_coef, 
+                          "+Mobilization", "+Motivations", "+Resources","+Demographics", 
+                          "Simple Model"))
+ggplot() + 
+  geom_pointrange(data=d, mapping=aes(x=donate_coef, y=mean, ymin=upper, ymax=lower), width=0.2, size=1, color="blue", fill="white", shape=21) +coord_flip() + ylab("Sexual Orientation Difference Coefficient") + xlab("Models") + theme_bw() + geom_hline(yintercept = 0, color="red")
+
+#Non-electoral
+d1=data.frame(donate_coef=c("Simple Model","+Demographics","+Resources","+Motivations", "+Mobilization"), mean=c(0.65,0.660, 0.651,	0.378, 0.351), lower=c(0.38, 0.387,	0.407,	0.143, 0.122), upper=c(0.91, 0.933,	0.895,	0.613, 0.581))
+d1 <- mutate(d1, donate_coef = fct_relevel(donate_coef, 
+                                         "+Mobilization", "+Motivations","+Resources","+Demographics", 
+                                         "Simple Model"))
+ggplot() + 
+  geom_pointrange(data=d1, mapping=aes(x=donate_coef, y=mean, ymin=upper, ymax=lower), width=0.2, size=1, color="blue", fill="white", shape=21) +coord_flip() + ylab("Sexual Orientation Difference Coefficient") + xlab("Models") + theme_bw() + ylim(0,1) + geom_hline(yintercept = 0, color="red")
+#Voting
+d2=data.frame(donate_coef=c("Simple Model","+Demographics","+Resources","+Motivations", "+Mobilization"), mean=c(-0.09, -0.019, -0.006,	-0.034, -0.035), lower=c(-0.15, -0.081,	-0.062,	-0.088, -0.089), upper=c(-0.03,0.043,	0.051,	0.020, 0.019))
+d2 <- mutate(d2, donate_coef = fct_relevel(donate_coef, 
+                                           "+Mobilization", "+Motivations", "+Resources","+Demographics",
+                                           "Simple Model"))
+ggplot() + 
+  geom_pointrange(data=d2, mapping=aes(x=donate_coef, y=mean, ymin=upper, ymax=lower), width=0.2, size=1, color="blue", fill="white", shape=21) +coord_flip() + ylab("Sexual Orientation Difference Coefficient") + xlab("Models") + theme_bw() + geom_hline(yintercept = 0, color="red")
+
+
 #####Effects Model Table#####
 
 
@@ -542,6 +589,22 @@ crosstab(anes_data$party_donation, anes_data$orientation1, prop.c=T, plot=F, dig
 iss_grp_sig <- svyglm(as.numeric(iss_group_donation) ~ orientation1, design=anes_data_weighted)
 summary(iss_grp_sig)
 
+###Feeling Thermometer placebo V202180
+nonelectoral_t4v3 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + as.numeric(V202180) + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_hetero)
+summary(nonelectoral_t4v3)
+tab_model(nonelectoral_t4v3, show.se=TRUE, digits = 3)
+
+nonelectoral_t4v3 <- svyglm(non_electoral_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + as.numeric(V202180) + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_sexmin)
+summary(nonelectoral_t4v3)
+tab_model(nonelectoral_t4v3, show.se=TRUE, digits = 3)
+
+#Demos + Resources + Motivations + Mobilization
+donation_t4v3 <- svyglm(donation_index ~  orientation1 + male + race + marriage + age + age_square + education + income + interest_index + V202180 + partyid + partisanship + external_efficacy_index + knowledge_efficacy + non_party_mobil + approached, design=anes_data_weighted)
+summary(donation_t4v3)
+tab_model(donation_t4v3, show.se=TRUE, digits = 3)
+
+
+
 ###Look at the behavior of gay republicans- should be dismotivated
 svyby(~non_electoral_index, ~partyid, design=anes_data_sexmin, na.rm=TRUE, svymean)
 nonelect_sexmin_within <- svyglm(non_electoral_index ~ partyid, design=anes_data_sexmin)
@@ -553,3 +616,4 @@ svyby(~voted, ~partyid, design=anes_data_sexmin, na.rm=TRUE, svymean)
 vote_sexmin_within <- svyglm(voted ~ partyid, design=anes_data_sexmin)
 summary(vote_sexmin_within)
 svyby(~registered, ~partyid, design=anes_data_sexmin, na.rm=TRUE, svymean)
+
